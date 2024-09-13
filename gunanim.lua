@@ -35,7 +35,6 @@ Citizen.CreateThread(function()
     end
 end)
 
--- Thread to handle key press for weapon animation
 Citizen.CreateThread(function()
     while true do
         Citizen.Wait(0)
