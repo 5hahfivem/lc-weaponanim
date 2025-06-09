@@ -1,47 +1,46 @@
-local weaponAdded = false
-local keyPressed = false
+local keyPressed, weaponAdded = false, false
 
-local function handleWeaponAnimation(ped)
-    if not weaponAdded then
-        GiveWeaponToPed(ped, GetHashKey("weapon_petrolcan"), 0, false, true)
-        RemoveWeaponFromPed(ped, GetHashKey("weapon_petrolcan"))
-        weaponAdded = true
-    end
+local function notify(text, notifType)
+    lib.notify({
+        description = text,
+        type = notifType or 'inform'
+    })
 end
 
-local function handleMovementClipset(ped)
-    if IsPedArmed(ped, 4) then
-        SetPedWeaponMovementClipset(ped, "move_ped_wpn_jerrycan_generic", 0.50)
-    else
-        ResetPedWeaponMovementClipset(ped, 0.0)
+local function toggleWeaponAnimation()
+    if Config.WeaponAnimation == "always" then
+        return
     end
+
+    keyPressed = not keyPressed
+    notify(keyPressed and "Weapon animation enabled." or "Weapon animation disabled.", keyPressed and "success" or "error")
 end
 
-Citizen.CreateThread(function()
-    local ped = PlayerPedId()
+RegisterCommand("ChangeWeaponRunningAnimation", toggleWeaponAnimation)
+RegisterKeyMapping("ChangeWeaponRunningAnimation", "Change Weapon Running Animation", "keyboard", Config.ChangeWeaponRunningAnimationKey)
+
+CreateThread(function()
+    local sleep = 100
     while true do
-        Citizen.Wait(100)
+        Wait(sleep)
+        local ped = PlayerPedId()
+        local isArmed = IsPedArmed(ped, 4)
 
-        if Config.WeaponAnimation == "always" then
-            handleWeaponAnimation(ped)
-            handleMovementClipset(ped)
+        if Config.WeaponAnimation == "always" or (Config.WeaponAnimation == "key" and keyPressed) then
+            if not weaponAdded then
+                local hash = GetHashKey("weapon_petrolcan")
+                GiveWeaponToPed(ped, hash, 0, false, true)
+                RemoveWeaponFromPed(ped, hash)
+                weaponAdded = true
+            end
 
-        elseif Config.WeaponAnimation == "key" and keyPressed then
-            handleWeaponAnimation(ped)
-            handleMovementClipset(ped)
+            if isArmed then
+                SetPedWeaponMovementClipset(ped, "move_ped_wpn_jerrycan_generic", 0.5)
+            else
+                ResetPedWeaponMovementClipset(ped, 0.0)
+            end
         else
             ResetPedWeaponMovementClipset(ped, 0.0)
-        end
-    end
-end)
-
-Citizen.CreateThread(function()
-    while true do
-        Citizen.Wait(0)
-        if Config.WeaponAnimation == "key" then
-            if IsControlJustPressed(1, Config.Keybind) then
-                keyPressed = not keyPressed
-            end
         end
     end
 end)
